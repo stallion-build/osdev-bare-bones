@@ -1,0 +1,42 @@
+mode base {
+    require-git "https://github.com/stallion-build/gcc-cross-compiler.git"
+}
+
+mode bootstrap extends base {
+    compiler "vendor/gcc-cross-compiler/bin/i686-elf-as"
+    entry "boot.s"
+    output "boot.o"
+}
+
+mode object extends base {
+    entry "src/kernel.c"
+    compiler "vendor/gcc-cross-compiler/bin/i686-elf-gcc"
+    output "kernel.o"
+    opt "-std=gnu99" "-ffreestanding" "-O2" "-Wall" "-Wextra"
+}
+
+mode link extends base {
+    i686-elf-gcc
+    output "myos.bin"
+    opt "-T linker.ld"
+    opt "-ffreestanding"
+    opt "-O2" 
+    opt "-nostdlib"
+    opt "-lgcc"
+    entry "boot.o"
+    include "kernel.o"
+}
+
+mode iso {
+    before "stallion bootstrap"
+    before "stallion object"
+    before "stallion link"
+    before "mkdir -p isodir/boot/grub"
+    before "cp myos.bin isodir/boot/myos.bin"
+    before "cp grub.cfg isodir/boot/grub/grub.cfg"
+    compiler "grub-mkrescue"
+    entry "isodir"
+    output "myos.iso"
+}
+
+default mode iso
